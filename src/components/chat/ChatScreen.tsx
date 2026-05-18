@@ -273,8 +273,7 @@ export function ChatScreen({ threadId }: ChatScreenProps) {
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}>
+        behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <SafeAreaView
           edges={["top"]}
           style={{ backgroundColor: colors.background }}>

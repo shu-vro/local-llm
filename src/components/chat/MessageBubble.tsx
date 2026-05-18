@@ -7,6 +7,7 @@ import {
   AttachmentPreview,
   attachmentToBrief,
 } from "./AttachmentPreview";
+import { MarkdownMessage } from "./MarkdownMessage";
 import { StreamingCursor } from "./StreamingCursor";
 
 import { Attachment } from "@/db/repositories/attachmentsRepo";
@@ -89,25 +90,31 @@ export function MessageBubble({
           </View>
         ) : null}
 
-        {message.content || isStreaming ? (
-          <Text
-            selectable
-            style={[
-              styles.text,
-              {
-                color: isUser
-                  ? colors.bubbleUserText
-                  : colors.bubbleAssistantText,
-                fontSize: Typography.size.md,
-                lineHeight: Typography.size.md * Typography.lineHeight.relaxed,
-              },
-            ]}>
-            {message.content}
-            {isStreaming ? "\u200B" : ""}
-          </Text>
+        {isUser ? (
+          message.content || isStreaming ? (
+            <Text
+              selectable
+              style={[
+                styles.text,
+                {
+                  color: colors.bubbleUserText,
+                  fontSize: Typography.size.md,
+                  lineHeight:
+                    Typography.size.md * Typography.lineHeight.relaxed,
+                },
+              ]}>
+              {message.content}
+              {isStreaming ? "\u200B" : ""}
+            </Text>
+          ) : null
+        ) : message.content || isStreaming ? (
+          <MarkdownMessage
+            markdown={message.content}
+            isStreaming={isStreaming}
+          />
         ) : null}
 
-        {isStreaming ? (
+        {isStreaming && isUser ? (
           <View style={{ marginTop: 4 }}>
             <StreamingCursor visible />
           </View>
