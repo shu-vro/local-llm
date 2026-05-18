@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import { Alert, Linking, StyleSheet, View } from "react-native";
 import { EnrichedMarkdownText } from "react-native-enriched-markdown";
 
@@ -13,13 +13,11 @@ export interface MarkdownMessageProps {
 
 export function MarkdownMessage({
   markdown,
-  isStreaming: isGenerating = false,
+  isStreaming = false,
 }: MarkdownMessageProps) {
   const { colors } = useTheme();
-  const markdownStyle = markdownStyleFor(colors);
-  const { processedMarkdown, isStreaming: isProcessing } =
-    useStreamdownMarkdown(markdown);
-  const isStreaming = isGenerating || isProcessing;
+  const markdownStyle = useMemo(() => markdownStyleFor(colors), [colors]);
+  const { displayMarkdown } = useStreamdownMarkdown(markdown);
 
   const handleLinkPress = useCallback((event: { url: string }) => {
     const { url } = event;
@@ -34,7 +32,7 @@ export function MarkdownMessage({
     ]);
   }, []);
 
-  if (!markdown && !isGenerating) {
+  if (!markdown && !isStreaming) {
     return null;
   }
 
@@ -42,7 +40,7 @@ export function MarkdownMessage({
     <View style={styles.container}>
       <EnrichedMarkdownText
         flavor="github"
-        markdown={processedMarkdown}
+        markdown={displayMarkdown}
         md4cFlags={{ latexMath: true }}
         streamingAnimation={isStreaming}
         selectable={!isStreaming}

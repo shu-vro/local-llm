@@ -1,3 +1,4 @@
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
@@ -40,9 +41,11 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <DatabaseProvider>
             <ThemeProvider>
-              <CactusProvider>
-                <ThemedRoot>{null}</ThemedRoot>
-              </CactusProvider>
+              <BottomSheetModalProvider>
+                <CactusProvider>
+                  <ThemedRoot>{null}</ThemedRoot>
+                </CactusProvider>
+              </BottomSheetModalProvider>
             </ThemeProvider>
           </DatabaseProvider>
         </SafeAreaProvider>

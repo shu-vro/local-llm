@@ -67,17 +67,20 @@ export function MessageList({
   }, [attachmentsByMessage, messages]);
 
   const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<MessageRowItem>) => (
-      <MessageBubble
-        message={item.message}
-        attachments={item.attachments}
-        onCopy={onCopy}
-        onDelete={onDelete}
-        onRegenerate={onRegenerate}
-        onEdit={onEdit}
-        isLastAssistant={item.isLastAssistant}
-      />
-    ),
+    ({ item }: ListRenderItemInfo<MessageRowItem>) => {
+      // console.log(item.message);
+      return (
+        <MessageBubble
+          message={item.message}
+          attachments={item.attachments}
+          onCopy={onCopy}
+          onDelete={onDelete}
+          onRegenerate={onRegenerate}
+          onEdit={onEdit}
+          isLastAssistant={item.isLastAssistant}
+        />
+      );
+    },
     [onCopy, onDelete, onEdit, onRegenerate],
   );
 
@@ -116,10 +119,22 @@ export function MessageList({
     return <View style={styles.emptyContainer}>{EmptyComponent}</View>;
   }
 
+  const listVersion = useMemo(
+    () =>
+      data
+        .map(
+          (row) =>
+            `${row.message.id}:${row.message.status}:${row.message.content.length}`,
+        )
+        .join("|"),
+    [data],
+  );
+
   return (
     <FlatList
       ref={listRef}
       data={data}
+      extraData={listVersion}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
       contentContainerStyle={styles.content}

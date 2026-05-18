@@ -20,7 +20,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   temperature: 0.7,
   topP: 0.95,
   topK: 40,
-  maxTokens: 512,
+  maxTokens: 2048,
   themePreference: "system",
 };
 

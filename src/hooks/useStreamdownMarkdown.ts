@@ -1,61 +1,34 @@
-import { useEffect, useRef, useState } from "react";
+import { useMemo } from "react";
 import type { RemendOptions } from "remend";
-import remend from "remend";
 
-const defaultRemendConfig: RemendOptions = {
-  bold: true,
-  italic: true,
-  boldItalic: true,
-  strikethrough: true,
-  links: true,
-  linkMode: "text-only",
-  images: true,
-  inlineCode: true,
-  katex: true,
-  setextHeadings: true,
-};
+import {
+  prepareMarkdownForRender,
+  STREAMDOWN_REMEND_CONFIG,
+} from "@/utils/markdownMath";
 
 interface UseStreamdownMarkdownOptions {
   remendConfig?: RemendOptions;
 }
 
 interface UseStreamdownMarkdownResult {
-  processedMarkdown: string;
-  isStreaming: boolean;
+  displayMarkdown: string;
+  isProcessing: boolean;
 }
 
+/**
+ * Applies remend on every update (including streaming), like react-native-streamdown.
+ * @see https://github.com/software-mansion-labs/react-native-streamdown
+ */
 export function useStreamdownMarkdown(
   markdown: string,
   options?: UseStreamdownMarkdownOptions,
 ): UseStreamdownMarkdownResult {
-  const [processedMarkdown, setProcessedMarkdown] = useState("");
-  const [isStreaming, setIsStreaming] = useState(false);
-  const versionRef = useRef(0);
+  const remendConfig = options?.remendConfig ?? STREAMDOWN_REMEND_CONFIG;
 
-  const remendConfig = options?.remendConfig ?? defaultRemendConfig;
+  const displayMarkdown = useMemo(
+    () => prepareMarkdownForRender(markdown, remendConfig),
+    [markdown, remendConfig],
+  );
 
-  useEffect(() => {
-    if (markdown === "") {
-      setProcessedMarkdown("");
-      setIsStreaming(false);
-      return;
-    }
-
-    setIsStreaming(true);
-    const currentVersion = ++versionRef.current;
-
-    const frame = requestAnimationFrame(() => {
-      const result = remend(markdown, remendConfig);
-      if (currentVersion === versionRef.current) {
-        setProcessedMarkdown(result);
-        setIsStreaming(false);
-      }
-    });
-
-    return () => {
-      cancelAnimationFrame(frame);
-    };
-  }, [markdown, remendConfig]);
-
-  return { processedMarkdown, isStreaming };
+  return { displayMarkdown, isProcessing: false };
 }

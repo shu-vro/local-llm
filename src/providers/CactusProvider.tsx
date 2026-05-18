@@ -135,23 +135,29 @@ export function CactusProvider({ children }: { children: React.ReactNode }) {
     void refreshCatalog();
   }, [refreshCatalog]);
 
-  const syncInstalledFromDb = useCallback(async (rows: ModelState[]) => {
-    const map = new Map<string, ModelInstallState>();
-    for (const row of rows) {
-      const alias = resolveRegistryAlias(row.modelId, row.localAlias);
-      const onDisk = await checkModelOnDisk(alias);
-      map.set(row.modelId, {
-        displayId: row.modelId,
-        downloaded: row.downloaded && onDisk,
-        initialized: row.initialized,
-        downloadProgress: row.downloaded ? 1 : row.downloadProgress,
-        isDownloading: downloadingRef.current.has(row.modelId),
-        error: null,
-        quantization: row.quantization ?? DEFAULT_MODEL_QUANTIZATION,
-      });
-    }
-    if (mountedRef.current) setInstalledStates(map);
-  }, []);
+  const syncInstalledFromDb = useCallback(
+    async (rows: ModelState[]) => {
+      const map = new Map<string, ModelInstallState>();
+      for (const row of rows) {
+        const alias = resolveRegistryAlias(row.modelId, row.localAlias);
+        const onDisk = await checkModelOnDisk(alias);
+        if (onDisk && !row.downloaded && dbCtx?.repos) {
+          await dbCtx.repos.modelState.markDownloaded(row.modelId);
+        }
+        map.set(row.modelId, {
+          displayId: row.modelId,
+          downloaded: onDisk,
+          initialized: row.initialized,
+          downloadProgress: onDisk ? 1 : row.downloadProgress,
+          isDownloading: downloadingRef.current.has(row.modelId),
+          error: null,
+          quantization: row.quantization ?? DEFAULT_MODEL_QUANTIZATION,
+        });
+      }
+      if (mountedRef.current) setInstalledStates(map);
+    },
+    [dbCtx?.repos],
+  );
 
   const bootstrapClient = useCallback(
     async (displayId: string, quant: ModelQuantization) => {
@@ -186,7 +192,28 @@ export function CactusProvider({ children }: { children: React.ReactNode }) {
 
       const stored = await dbCtx.repos.modelState.get(displayId);
       const onDisk = await c.checkModelOnDisk();
-      if (onDisk) c.markAsDownloaded();
+      if (onDisk) {
+        c.markAsDownloaded();
+        await dbCtx.repos.modelState.markDownloaded(displayId);
+        setInstalledStates((prev) => {
+          const next = new Map(prev);
+          const cur = next.get(displayId) ?? {
+            displayId,
+            downloaded: false,
+            initialized: false,
+            downloadProgress: 0,
+            isDownloading: false,
+            error: null,
+            quantization: quant,
+          };
+          next.set(displayId, {
+            ...cur,
+            downloaded: true,
+            downloadProgress: 1,
+          });
+          return next;
+        });
+      }
 
       if (mountedRef.current) {
         setClient(c);
@@ -263,7 +290,7 @@ export function CactusProvider({ children }: { children: React.ReactNode }) {
       registryAlias:
         activeCatalogModel?.registryAlias ??
         displayIdToRegistryAlias(activeDisplayId),
-      isDownloaded: activeInstall?.downloaded ?? client?.isDownloaded ?? false,
+      isDownloaded: Boolean(activeInstall?.downloaded || client?.isDownloaded),
       isDownloading: activeInstall?.isDownloading ?? false,
       downloadProgress: activeInstall?.downloadProgress ?? 0,
       isInitializing,

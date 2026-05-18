@@ -19,9 +19,11 @@ import {
   SYSTEM_PROMPT,
 } from "./promptBuilder";
 import { ragQuery } from "./rag";
+import { hitMaxTokenLimit, pickLongestStreamContent } from "./streamContent";
 
 const PERSIST_FLUSH_MS = 80;
 const TITLE_MAX_TOKENS = 24;
+const TITLE_GENERATION_DELAY_MS = 500;
 
 export interface GenerationMetrics {
   tokensPerSecond?: number;
@@ -80,6 +82,7 @@ export class GenerationController {
     assistantMessageId: string;
     abort: AbortController;
   } | null = null;
+  private titleTimer: ReturnType<typeof setTimeout> | null = null;
   private listeners = new Set<GenerationListener>();
 
   constructor(
@@ -231,6 +234,7 @@ export class GenerationController {
   }
 
   async cancel(): Promise<void> {
+    this.clearTitleTimer();
     if (!this.running) return;
     const ref = this.running;
     ref.abort.abort();
@@ -393,16 +397,28 @@ export class GenerationController {
       flush(true);
       await flushInFlight;
 
-      const finalContent =
-        (result?.response && result.response.length >= buffer.length
-          ? result.response
-          : buffer) || "";
+      const row = await this.repos.messages.getById(assistantMessageId);
+      const finalContent = pickLongestStreamContent(
+        buffer,
+        result?.response,
+        row?.content,
+      );
+
+      if (result && !result.success) {
+        throw new Error(
+          "The local model stopped before finishing the response.",
+        );
+      }
+
       const totalTimeMs = result?.totalTimeMs;
       const totalTokens = result?.totalTokens;
+      const decodeTokens = result?.decodeTokens ?? totalTokens;
+      const stoppedReason = hitMaxTokenLimit(decodeTokens, settings.maxTokens)
+        ? "max_tokens"
+        : undefined;
       const decodeTps =
-        typeof (result as { decodeTps?: number } | undefined)?.decodeTps ===
-        "number"
-          ? (result as { decodeTps: number }).decodeTps
+        typeof result?.decodeTps === "number"
+          ? result.decodeTps
           : totalTimeMs && totalTokens
             ? totalTokens / (totalTimeMs / 1000)
             : streamStartedAt != null && streamTokenEstimate > 0
@@ -415,9 +431,11 @@ export class GenerationController {
           timeToFirstTokenMs: result?.timeToFirstTokenMs,
           totalTimeMs,
           totalTokens,
+          decodeTokens,
           tokensPerSecond: decodeTps,
           contextTokensUsed,
           contextTokensMax,
+          stoppedReason,
         },
       });
       if (decodeTps != null) {
@@ -435,11 +453,14 @@ export class GenerationController {
       }
       await this.repos.threads.touch(threadId);
 
-      this.emit({ type: "completed", threadId, messageId: assistantMessageId });
-      void this.maybeGenerateTitle(threadId).catch((err) => {
-        if (__DEV__)
-          console.warn("[GenerationController] title generation failed:", err);
+      const saved = await this.repos.messages.getById(assistantMessageId);
+      this.emit({
+        type: "completed",
+        threadId,
+        messageId: assistantMessageId,
+        message: saved ?? undefined,
       });
+      this.scheduleTitleGeneration(threadId);
     } catch (err) {
       if (flushTimer) {
         clearTimeout(flushTimer);
@@ -453,27 +474,56 @@ export class GenerationController {
       }
       const wasAborted = abort.signal.aborted;
       const message = err instanceof Error ? err.message : String(err);
+      const row = await this.repos.messages.getById(assistantMessageId);
+      const partial = pickLongestStreamContent(buffer, row?.content);
       if (wasAborted) {
-        await this.repos.messages.finalize(assistantMessageId, "cancelled");
+        await this.repos.messages.finalize(assistantMessageId, "cancelled", {
+          content: partial || undefined,
+        });
+        const saved = await this.repos.messages.getById(assistantMessageId);
         this.emit({
           type: "cancelled",
           threadId,
           messageId: assistantMessageId,
+          message: saved ?? undefined,
         });
       } else {
         await this.repos.messages.finalize(assistantMessageId, "failed", {
           error: message,
+          content: partial || undefined,
         });
+        const saved = await this.repos.messages.getById(assistantMessageId);
         this.emit({
           type: "failed",
           threadId,
           messageId: assistantMessageId,
           error: message,
+          message: saved ?? undefined,
         });
       }
     } finally {
       this.running = null;
     }
+  }
+
+  private clearTitleTimer(): void {
+    if (this.titleTimer) {
+      clearTimeout(this.titleTimer);
+      this.titleTimer = null;
+    }
+  }
+
+  /** Run after chat so title inference does not race the next user message. */
+  private scheduleTitleGeneration(threadId: string): void {
+    this.clearTitleTimer();
+    this.titleTimer = setTimeout(() => {
+      this.titleTimer = null;
+      if (this.running) return;
+      void this.maybeGenerateTitle(threadId).catch((err) => {
+        if (__DEV__)
+          console.warn("[GenerationController] title generation failed:", err);
+      });
+    }, TITLE_GENERATION_DELAY_MS);
   }
 
   private async maybeGenerateTitle(threadId: string): Promise<void> {

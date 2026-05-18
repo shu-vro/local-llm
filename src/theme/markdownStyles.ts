@@ -90,15 +90,6 @@ export function markdownStyleFor(colors: ThemeColors): MarkdownStyle {
       cellPaddingHorizontal: Spacing.md,
       cellPaddingVertical: Spacing.sm,
     },
-    math: {
-      fontSize: Typography.size.md,
-      color: colors.bubbleAssistantText,
-      backgroundColor: colors.surfaceMuted,
-      padding: Spacing.sm,
-      marginTop: Spacing.sm,
-      marginBottom: Spacing.sm,
-      textAlign: "center",
-    },
     inlineMath: {
       color: colors.bubbleAssistantText,
     },

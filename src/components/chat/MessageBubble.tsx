@@ -55,6 +55,7 @@ export function MessageBubble({
     typeof message.metadata?.tokensPerSecond === "number"
       ? message.metadata.tokensPerSecond
       : null;
+  const stoppedAtMaxTokens = message.metadata?.stoppedReason === "max_tokens";
 
   const briefs: AttachmentBrief[] = attachments.map(attachmentToBrief);
 
@@ -130,9 +131,14 @@ export function MessageBubble({
             Generation stopped.
           </Text>
         ) : null}
-        {!isUser && !isStreaming && tokensPerSecond != null ? (
+        {!isUser && tokensPerSecond != null && tokensPerSecond > 0 ? (
           <Text style={[styles.metaText, { color: colors.textMuted }]}>
             {tokensPerSecond.toFixed(1)} tok/s
+          </Text>
+        ) : null}
+        {!isUser && stoppedAtMaxTokens && !isStreaming ? (
+          <Text style={[styles.metaText, { color: colors.textMuted }]}>
+            Stopped at max tokens — raise the limit in Settings
           </Text>
         ) : null}
       </Pressable>
@@ -145,7 +151,7 @@ export function MessageBubble({
         <Text style={[styles.timestamp, { color: colors.textMuted }]}>
           {formatTime(message.createdAt)}
         </Text>
-        {showActions ? (
+        {showActions || !isUser ? (
           <View style={[styles.actionRow]}>
             {onCopy ? (
               <IconButton
@@ -213,5 +219,5 @@ const styles = StyleSheet.create({
   actionsRight: { justifyContent: "flex-end" },
   actionsLeft: { justifyContent: "flex-start" },
   actionRow: { flexDirection: "row", alignItems: "center", gap: 2 },
-  timestamp: { fontSize: Typography.size.xs },
+  timestamp: { fontSize: Typography.size.sm },
 });

@@ -283,6 +283,10 @@ export default function SettingsScreen() {
               min={32}
               max={4096}
             />
+            <Text style={[styles.helper, { color: colors.textMuted }]}>
+              Reply length limit. If answers stop mid-sentence, increase this
+              (default 2048).
+            </Text>
           </Surface>
 
           <Surface variant="elevated" radius="lg" padded style={styles.card}>

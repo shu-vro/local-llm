@@ -71,6 +71,7 @@ export class CactusClient {
   private downloaded = false;
   private generating = false;
   private downloading = false;
+  private completeChain: Promise<unknown> = Promise.resolve();
   private currentSignal: AbortSignal | null = null;
   private currentSignalListener: (() => void) | null = null;
 
@@ -207,12 +208,18 @@ export class CactusClient {
   async complete(
     request: CactusCompleteRequest,
   ): Promise<CactusLMCompleteResult> {
-    if (this.generating) {
-      throw new AppError(
-        "cactus/already-generating",
-        "A generation is already in progress; stop it before starting another.",
-      );
-    }
+    const run = () => this.runComplete(request);
+    const queued = this.completeChain.then(run, run);
+    this.completeChain = queued.then(
+      () => undefined,
+      () => undefined,
+    );
+    return queued;
+  }
+
+  private async runComplete(
+    request: CactusCompleteRequest,
+  ): Promise<CactusLMCompleteResult> {
     if (!this.downloaded) {
       throw new AppError(
         "cactus/model-not-downloaded",

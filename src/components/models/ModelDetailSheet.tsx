@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 
 import { CatalogModel } from "@/ai/modelCatalog";
 import { formatDownloadSize, sizeTierLabel } from "@/ai/modelSpec";
@@ -8,8 +8,8 @@ import { useTheme } from "@/hooks/useTheme";
 import { ModelInstallState } from "@/providers/CactusProvider";
 import { Spacing, Typography } from "@/theme";
 
+import { BottomSheet } from "@/components/common/BottomSheet";
 import { Button } from "@/components/common/Button";
-import { Modal } from "@/components/common/Modal";
 import { ProgressBar } from "@/components/common/ProgressBar";
 
 import { CapabilityChips } from "./CapabilityChips";
@@ -62,10 +62,8 @@ export function ModelDetailSheet({
   const downloading = install?.isDownloading ?? false;
 
   return (
-    <Modal visible={visible} onClose={onClose} align="bottom">
-      <ScrollView
-        style={{ maxHeight: 520 }}
-        contentContainerStyle={styles.content}>
+    <BottomSheet visible={visible} onClose={onClose}>
+      <View style={styles.content}>
         <Text style={[styles.title, { color: colors.text }]}>
           {model.shortName}
         </Text>
@@ -196,13 +194,13 @@ export function ModelDetailSheet({
           ) : null}
           <Button title="Close" variant="ghost" fullWidth onPress={onClose} />
         </View>
-      </ScrollView>
-    </Modal>
+      </View>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { gap: Spacing.md, paddingBottom: Spacing.lg },
+  content: { gap: Spacing.md },
   title: {
     fontSize: Typography.size.xl,
     fontWeight: Typography.weight.semibold,

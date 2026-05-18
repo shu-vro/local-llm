@@ -12,7 +12,6 @@ export interface ChatHeaderProps {
   title: string;
   modelReady: boolean;
   isGenerating: boolean;
-  tokensPerSecond?: number;
   onOpenDrawer: () => void;
   onNewChat: () => void;
   onPressTitle?: () => void;
@@ -23,7 +22,6 @@ export function ChatHeader({
   title,
   modelReady,
   isGenerating,
-  tokensPerSecond,
   onOpenDrawer,
   onNewChat,
   onPressTitle,
@@ -36,12 +34,8 @@ export function ChatHeader({
     : modelReady
       ? colors.success
       : colors.danger;
-  const tpsLabel =
-    isGenerating && tokensPerSecond != null && tokensPerSecond > 0
-      ? ` · ${tokensPerSecond.toFixed(1)} tok/s`
-      : "";
   const statusLabel = isGenerating
-    ? `Thinking${tpsLabel}`
+    ? "Thinking"
     : modelReady
       ? "Local · Ready"
       : "Local · Setup";

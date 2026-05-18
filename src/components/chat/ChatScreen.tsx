@@ -23,6 +23,7 @@ import { Message } from "@/db/repositories/messagesRepo";
 import { useCactus } from "@/hooks/useCactus";
 import { useChatGeneration } from "@/hooks/useChatGeneration";
 import { useDatabase } from "@/hooks/useDatabase";
+import { useGenerationMessageSync } from "@/hooks/useGenerationMessageSync";
 import { useMessages } from "@/hooks/useMessages";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
@@ -53,7 +54,7 @@ export function ChatScreen({ threadId }: ChatScreenProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { repos } = useDatabase();
-  const { status } = useCactus();
+  const { status, controller } = useCactus();
   const generation = useChatGeneration();
   const { settings } = useSettings();
   const {
@@ -86,56 +87,35 @@ export function ChatScreen({ threadId }: ChatScreenProps) {
     };
   }, [threadId, repos]);
 
+  const handleGenerationTerminal = useCallback(() => {
+    // Message content/status is applied via useGenerationMessageSync — avoid
+    // reloading from DB here, which could briefly show a truncated answer.
+    void refreshThreads();
+    if (repos && threadId) {
+      void repos.threads
+        .getById(threadId)
+        .then((t) => {
+          if (t) setActiveTitle(t.title);
+        })
+        .catch(() => undefined);
+    }
+  }, [refreshThreads, repos, threadId]);
+
+  useGenerationMessageSync(
+    controller,
+    threadId,
+    applyLocal,
+    handleGenerationTerminal,
+  );
+
   useEffect(() => {
     const ev = generation.lastEvent;
-    if (!ev) return;
-    if (!threadId || ev.threadId !== threadId) return;
-    switch (ev.type) {
-      case "user-created":
-      case "assistant-created":
-        void refresh();
-        void refreshThreads();
-        break;
-      case "token":
-        if (ev.messageId && ev.delta) {
-          const targetId = ev.messageId;
-          const delta = ev.delta;
-          applyLocal((msgs) =>
-            msgs.map((m) =>
-              m.id === targetId
-                ? { ...m, content: m.content + delta, status: "streaming" }
-                : m,
-            ),
-          );
-        }
-        break;
-      case "completed":
-      case "cancelled":
-      case "failed":
-        void refresh();
-        void refreshThreads();
-        if (repos && threadId) {
-          void repos.threads
-            .getById(threadId)
-            .then((t) => {
-              if (t) setActiveTitle(t.title);
-            })
-            .catch(() => undefined);
-        }
-        break;
-      case "title":
-        if (ev.title) setActiveTitle(ev.title);
-        void refreshThreads();
-        break;
+    if (!ev || !threadId || ev.threadId !== threadId) return;
+    if (ev.type === "title" && ev.title) {
+      setActiveTitle(ev.title);
+      void refreshThreads();
     }
-  }, [
-    applyLocal,
-    generation.lastEvent,
-    refresh,
-    refreshThreads,
-    repos,
-    threadId,
-  ]);
+  }, [generation.lastEvent, refreshThreads, threadId]);
 
   const ensureThread = useCallback(async (): Promise<string> => {
     if (threadId) return threadId;
@@ -283,7 +263,6 @@ export function ChatScreen({ threadId }: ChatScreenProps) {
             isGenerating={
               generation.isGenerating && generation.activeThreadId === threadId
             }
-            tokensPerSecond={liveMetrics?.tokensPerSecond}
             onOpenDrawer={() => setDrawerOpen(true)}
             onNewChat={async () => {
               const id = await createThread();
