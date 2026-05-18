@@ -8,7 +8,7 @@
     "ios": "expo run:ios",
     "prebuild": "expo prebuild --clean",
     "lint": "expo lint",
-    "build:android": "cd android && ./gradlew assembleRelease && mv android/app/build/outputs/apk/release/app-release.apk ../build/app-release.apk"
+    "build:android": "cd android && ./gradlew assembleRelease && mv ./android/app/build/outputs/apk/release/app-release.apk ../build/app-release.apk"
   },
   "dependencies": {
     "@react-navigation/native": "^7.1.33",
