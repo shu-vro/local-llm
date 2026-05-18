@@ -1,5 +1,5 @@
 import { useRouter, type Href } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -20,6 +20,7 @@ import { TextInput } from "@/components/common/TextInput";
 import { useActiveModel } from "@/hooks/useActiveModel";
 import { useCactus } from "@/hooks/useCactus";
 import { useDatabase } from "@/hooks/useDatabase";
+import { useHuggingFaceToken } from "@/hooks/useHuggingFaceToken";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
 import { deleteAllAttachments, deleteAllCorpus } from "@/native/fileStore";
@@ -107,6 +108,12 @@ export default function SettingsScreen() {
   const { repos, reload } = useDatabase();
   const { status, refreshCorpus } = useCactus();
   const { displayName, deleteModel } = useActiveModel();
+  const hf = useHuggingFaceToken();
+  const [hfDraft, setHfDraft] = useState("");
+
+  useEffect(() => {
+    if (!hf.loading) setHfDraft(hf.token);
+  }, [hf.loading, hf.token]);
 
   const handleDeleteAllData = useCallback(() => {
     Alert.alert(
@@ -313,6 +320,55 @@ export default function SettingsScreen() {
             ) : null}
           </Surface>
 
+          <Surface variant="elevated" radius="lg" padded style={styles.card}>
+            <Text style={[styles.section, { color: colors.text }]}>
+              Hugging Face
+            </Text>
+            <Text style={[styles.helper, { color: colors.textMuted }]}>
+              Optional. Needed only for some gated models (e.g. certain Gemma
+              weights). Stored locally in your app database and used for
+              downloads only.
+            </Text>
+            <TextInput
+              variant="flat"
+              placeholder="hf_…"
+              autoCapitalize="none"
+              autoCorrect={false}
+              secureTextEntry
+              value={hfDraft}
+              onChangeText={setHfDraft}
+              containerStyle={{ marginTop: Spacing.sm }}
+            />
+            <View style={styles.hfActions}>
+              <Button
+                title="Save token"
+                size="sm"
+                onPress={() =>
+                  void hf
+                    .save(hfDraft)
+                    .then(() =>
+                      Alert.alert("Saved", "Hugging Face token updated."),
+                    )
+                }
+              />
+              {hf.hasToken ? (
+                <Button
+                  title="Clear"
+                  size="sm"
+                  variant="ghost"
+                  onPress={() => {
+                    void hf.clear().then(() => setHfDraft(""));
+                  }}
+                />
+              ) : null}
+            </View>
+            {hf.hasToken ? (
+              <Text style={[styles.helper, { color: colors.success }]}>
+                Token saved
+              </Text>
+            ) : null}
+          </Surface>
+
           <Surface variant="muted" radius="lg" padded style={styles.card}>
             <Text style={[styles.section, { color: colors.text }]}>
               Privacy
@@ -408,6 +464,12 @@ const styles = StyleSheet.create({
   body: { fontSize: Typography.size.md, fontWeight: Typography.weight.medium },
   helper: { fontSize: Typography.size.sm, marginTop: Spacing.xs },
   modelActions: { marginTop: Spacing.sm },
+  hfActions: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+    alignItems: "center",
+  },
   privacyRow: {
     flexDirection: "row",
     alignItems: "flex-start",

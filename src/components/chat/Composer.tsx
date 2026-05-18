@@ -66,7 +66,6 @@ export function Composer({
   const { colors } = useTheme();
   const { supportsVision } = useActiveModel();
   const [content, setContent] = useState("");
-  const [height, setHeight] = useState(MIN_COMPOSER_HEIGHT);
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -237,7 +236,6 @@ export function Composer({
       await onSend(trimmed, atts);
       setContent("");
       setAttachments([]);
-      setHeight(MIN_COMPOSER_HEIGHT);
     } catch (err) {
       Alert.alert(
         "Could not send message",
@@ -288,33 +286,15 @@ export function Composer({
         </Pressable>
         <TextInput
           variant="flat"
-          containerStyle={{
-            flex: 1,
-            paddingVertical: 0,
-            minHeight: MIN_COMPOSER_HEIGHT,
-            alignItems: "stretch",
-          }}
+          containerStyle={styles.inputContainer}
           multiline
           blurOnSubmit={false}
           editable={!disabled}
           placeholder={disabledReason ?? "Message…"}
           value={content}
           onChangeText={setContent}
-          onContentSizeChange={(e) => {
-            const h = e.nativeEvent.contentSize.height;
-            setHeight(
-              Math.min(
-                MAX_MULTILINE_HEIGHT,
-                Math.max(MIN_COMPOSER_HEIGHT, h + 12),
-              ),
-            );
-          }}
-          inputStyle={{ textAlignVertical: "top" }}
-          style={{
-            maxHeight: MAX_MULTILINE_HEIGHT,
-            minHeight: MIN_COMPOSER_HEIGHT,
-            height,
-          }}
+          scrollEnabled
+          style={styles.composerInput}
         />
         {showStop ? (
           <Pressable
@@ -377,5 +357,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "flex-end",
+  },
+  inputContainer: {
+    flex: 1,
+    minHeight: MIN_COMPOSER_HEIGHT,
+    maxHeight: MAX_MULTILINE_HEIGHT,
+    alignSelf: "stretch",
+  },
+  composerInput: {
+    minHeight: MIN_COMPOSER_HEIGHT - 16,
+    maxHeight: MAX_MULTILINE_HEIGHT - 16,
   },
 });

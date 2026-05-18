@@ -8,6 +8,7 @@ import React, {
 
 import { createRepositories, Repositories } from "@/db/repositories";
 import { openAppDatabase, resetAppDatabaseInstance } from "@/db/sqlite";
+import { bindHfTokenSettings } from "@/native/hfAuth";
 import { NativeSQLite } from "@/native/sqlite";
 
 export interface DatabaseContextValue {
@@ -45,6 +46,10 @@ export function DatabaseProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const repos = useMemo(() => (db ? createRepositories(db) : null), [db]);
+
+  useEffect(() => {
+    if (repos) bindHfTokenSettings(repos.settings);
+  }, [repos]);
 
   const value = useMemo<DatabaseContextValue>(
     () => ({

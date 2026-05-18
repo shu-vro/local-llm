@@ -16,6 +16,7 @@ import {
   DEFAULT_MODEL_REGISTRY_ALIAS,
   type ModelQuantization,
 } from "@/ai/models";
+import { getHuggingFaceToken, withHuggingFaceTokenUrl } from "@/native/hfAuth";
 import { AppError } from "@/utils/errors";
 
 function normalizeProgress(value: number): number {
@@ -159,13 +160,15 @@ export class CactusClient {
 
     this.downloading = true;
     try {
-      const url = await resolveModelDownloadUrl(
+      let url = await resolveModelDownloadUrl(
         this.modelAlias,
         this.quantization,
         {
           pro: false,
         },
       );
+      const hfToken = await getHuggingFaceToken();
+      url = withHuggingFaceTokenUrl(url, hfToken);
       const storageName = this.getModelStorageName();
       await getCactusFileSystem().downloadModel(
         storageName,

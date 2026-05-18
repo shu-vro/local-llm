@@ -18,6 +18,7 @@
       }
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
       "package": "com.localllm.app",
       "adaptiveIcon": {
         "backgroundColor": "#0B0B0E",

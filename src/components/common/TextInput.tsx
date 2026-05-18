@@ -41,11 +41,13 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
       }
     })();
     const borderColor = variant === "outline" ? colors.border : "transparent";
+    const isMultiline = rest.multiline === true;
 
     return (
       <View
         style={[
           styles.container,
+          isMultiline && styles.containerMultiline,
           { backgroundColor: containerBg, borderColor },
           containerStyle,
         ]}>
@@ -53,8 +55,15 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
           ref={ref}
           placeholderTextColor={colors.textMuted}
           selectionColor={colors.accent}
+          textAlignVertical={isMultiline ? "top" : "center"}
           {...rest}
-          style={[styles.input, { color: colors.text }, inputStyle, style]}
+          style={[
+            styles.input,
+            isMultiline && styles.inputMultiline,
+            { color: colors.text },
+            inputStyle,
+            style,
+          ]}
         />
       </View>
     );
@@ -70,9 +79,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minHeight: 44,
   },
+  containerMultiline: {
+    justifyContent: "flex-start",
+    alignItems: "stretch",
+    paddingVertical: Spacing.sm,
+  },
   input: {
     fontSize: Typography.size.md,
     paddingVertical: Spacing.sm,
     margin: 0,
+    flexGrow: 0,
+  },
+  inputMultiline: {
+    paddingVertical: Spacing.xs,
+    width: "100%",
   },
 });

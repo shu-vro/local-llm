@@ -271,31 +271,31 @@ export function ChatScreen({ threadId }: ChatScreenProps) {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <SafeAreaView
-        edges={["top"]}
-        style={{ backgroundColor: colors.background }}>
-        <ChatHeader
-          title={activeTitle}
-          modelReady={status.isDownloaded}
-          isGenerating={
-            generation.isGenerating && generation.activeThreadId === threadId
-          }
-          tokensPerSecond={liveMetrics?.tokensPerSecond}
-          onOpenDrawer={() => setDrawerOpen(true)}
-          onNewChat={async () => {
-            const id = await createThread();
-            router.replace(`/chat/${id}`);
-          }}
-          onPressModel={() => router.push("/models" as Href)}
-        />
-      </SafeAreaView>
-
-      <ModelGate />
-
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 56 : 0}
-        style={styles.flex}>
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}>
+        <SafeAreaView
+          edges={["top"]}
+          style={{ backgroundColor: colors.background }}>
+          <ChatHeader
+            title={activeTitle}
+            modelReady={status.isDownloaded}
+            isGenerating={
+              generation.isGenerating && generation.activeThreadId === threadId
+            }
+            tokensPerSecond={liveMetrics?.tokensPerSecond}
+            onOpenDrawer={() => setDrawerOpen(true)}
+            onNewChat={async () => {
+              const id = await createThread();
+              router.replace(`/chat/${id}`);
+            }}
+            onPressModel={() => router.push("/models" as Href)}
+          />
+        </SafeAreaView>
+
+        <ModelGate />
+
         <View style={styles.flex}>
           <MessageList
             messages={messages}
@@ -310,9 +310,12 @@ export function ChatScreen({ threadId }: ChatScreenProps) {
             emptyComponent={emptyComponent}
           />
         </View>
-        <SafeAreaView
-          edges={["bottom"]}
-          style={{ backgroundColor: colors.composerBg }}>
+
+        <View
+          style={{
+            backgroundColor: colors.composerBg,
+            paddingBottom: insets.bottom,
+          }}>
           {contextBar && messages.length > 0 ? (
             <ContextUsageBar
               usedTokens={contextBar.used}
@@ -330,7 +333,7 @@ export function ChatScreen({ threadId }: ChatScreenProps) {
             onSend={handleSend}
             onStop={generation.cancel}
           />
-        </SafeAreaView>
+        </View>
       </KeyboardAvoidingView>
 
       <ThreadDrawer

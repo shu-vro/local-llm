@@ -25,7 +25,7 @@ function ThemedRoot({ children }: { children: React.ReactNode }) {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: colors.background },
-          animation: "fade",
+          animation: "slide_from_right",
         }}
       />
       {children}

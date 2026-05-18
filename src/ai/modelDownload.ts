@@ -1,6 +1,11 @@
 import { getRegistry } from "cactus-react-native";
 import { Platform } from "react-native";
 
+import {
+  getHuggingFaceToken,
+  huggingFaceAuthHeaders,
+  withHuggingFaceTokenUrl,
+} from "@/native/hfAuth";
 import { AppError } from "@/utils/errors";
 
 /** Cactus registry URLs use HF revision tags that may 404; weights live on `main`. */
@@ -8,9 +13,16 @@ function withMainRevision(url: string): string {
   return url.replace(/\/resolve\/v\d+\.\d+(?:\.\d+)?\//, "/resolve/main/");
 }
 
-async function probeDownloadUrl(url: string): Promise<boolean> {
+async function probeDownloadUrl(
+  url: string,
+  token: string | null,
+): Promise<boolean> {
   try {
-    const res = await fetch(url, { method: "HEAD" });
+    const authed = withHuggingFaceTokenUrl(url, token);
+    const res = await fetch(authed, {
+      method: "HEAD",
+      headers: huggingFaceAuthHeaders(token),
+    });
     return res.ok || res.status === 302;
   } catch {
     return false;
@@ -49,9 +61,12 @@ export async function resolveModelDownloadUrl(
     );
   }
 
+  const token = await getHuggingFaceToken();
   const candidates = [...new Set([primary, withMainRevision(primary)])];
   for (const url of candidates) {
-    if (await probeDownloadUrl(url)) return url;
+    if (await probeDownloadUrl(url, token)) {
+      return withHuggingFaceTokenUrl(url, token);
+    }
   }
 
   throw new AppError(
