@@ -2,6 +2,7 @@ import {
   BottomSheetBackdrop,
   BottomSheetModal,
   BottomSheetScrollView,
+  BottomSheetView,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
@@ -19,6 +20,8 @@ export interface BottomSheetProps {
   onClose: () => void;
   children: React.ReactNode;
   contentStyle?: ViewStyle;
+  /** Use BottomSheetView instead of ScrollView (better for fixed-height content). */
+  scrollable?: boolean;
 }
 
 export function BottomSheet({
@@ -26,10 +29,12 @@ export function BottomSheet({
   onClose,
   children,
   contentStyle,
+  scrollable = true,
 }: BottomSheetProps) {
   const { theme, colors } = useTheme();
   const insets = useSafeAreaInsets();
   const ref = useRef<BottomSheetModal>(null);
+  const wasVisibleRef = useRef(false);
   const bottomInset = insets.bottom + SHEET_MARGIN;
 
   const maxDynamicContentSize = useMemo(() => {
@@ -39,11 +44,22 @@ export function BottomSheet({
 
   useEffect(() => {
     if (visible) {
-      ref.current?.present();
-    } else {
+      const frame = requestAnimationFrame(() => {
+        ref.current?.present();
+      });
+      wasVisibleRef.current = true;
+      return () => cancelAnimationFrame(frame);
+    }
+    if (wasVisibleRef.current) {
       ref.current?.dismiss();
+      wasVisibleRef.current = false;
     }
   }, [visible]);
+
+  const handleDismiss = useCallback(() => {
+    wasVisibleRef.current = false;
+    onClose();
+  }, [onClose]);
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -66,7 +82,7 @@ export function BottomSheet({
       detached
       enableDynamicSizing
       enablePanDownToClose
-      onDismiss={onClose}
+      onDismiss={handleDismiss}
       backdropComponent={renderBackdrop}
       bottomInset={20}
       style={styles.detachedSheet}
@@ -79,11 +95,17 @@ export function BottomSheet({
       ]}
       handleIndicatorStyle={{ backgroundColor: colors.textMuted, width: 36 }}
       maxDynamicContentSize={maxDynamicContentSize}>
-      <BottomSheetScrollView
-        contentContainerStyle={[styles.content, contentStyle]}
-        keyboardShouldPersistTaps="handled">
-        {children}
-      </BottomSheetScrollView>
+      {scrollable ? (
+        <BottomSheetScrollView
+          contentContainerStyle={[styles.content, contentStyle]}
+          keyboardShouldPersistTaps="handled">
+          {children}
+        </BottomSheetScrollView>
+      ) : (
+        <BottomSheetView style={[styles.content, contentStyle]}>
+          {children}
+        </BottomSheetView>
+      )}
     </BottomSheetModal>
   );
 }

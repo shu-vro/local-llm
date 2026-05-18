@@ -78,6 +78,7 @@ export const SettingsIcon = (p: IconProps) => <Icon name="settings" {...p} />;
 export const CheckIcon = (p: IconProps) => <Icon name="check" {...p} />;
 export const SparkleIcon = (p: IconProps) => <Icon name="zap" {...p} />;
 export const ImageIcon = (p: IconProps) => <Icon name="image" {...p} />;
+export const CameraIcon = (p: IconProps) => <Icon name="camera" {...p} />;
 export const DocIcon = (p: IconProps) => <Icon name="file-text" {...p} />;
 export const AudioIcon = (p: IconProps) => <Icon name="mic" {...p} />;
 export const VideoIcon = (p: IconProps) => <Icon name="video" {...p} />;

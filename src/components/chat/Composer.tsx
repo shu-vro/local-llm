@@ -1,18 +1,11 @@
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import React, { useCallback, useState } from "react";
-import {
-  ActionSheetIOS,
-  Alert,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { PaperclipIcon, SendIcon, StopIcon } from "@/components/common/Icons";
 import { TextInput } from "@/components/common/TextInput";
+import { AttachmentPickerSheet } from "./AttachmentPickerSheet";
 import { AttachmentBrief, AttachmentPreview } from "./AttachmentPreview";
 
 import {
@@ -68,6 +61,7 @@ export function Composer({
   const [content, setContent] = useState("");
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [attachSheetVisible, setAttachSheetVisible] = useState(false);
 
   const canSend =
     !disabled &&
@@ -197,27 +191,13 @@ export function Composer({
     }
   }, [threadId]);
 
+  const closeAttachSheet = useCallback(() => {
+    setAttachSheetVisible(false);
+  }, []);
+
   const openAttachMenu = useCallback(() => {
-    const options = ["Photo library", "Take photo", "Files", "Cancel"];
-    const cancelButtonIndex = 3;
-    if (Platform.OS === "ios") {
-      ActionSheetIOS.showActionSheetWithOptions(
-        { options, cancelButtonIndex },
-        (idx) => {
-          if (idx === 0) void pickImage();
-          else if (idx === 1) void takePhoto();
-          else if (idx === 2) void pickDocument();
-        },
-      );
-    } else {
-      Alert.alert("Attach", undefined, [
-        { text: "Photo library", onPress: () => void pickImage() },
-        { text: "Take photo", onPress: () => void takePhoto() },
-        { text: "Files", onPress: () => void pickDocument() },
-        { text: "Cancel", style: "cancel" },
-      ]);
-    }
-  }, [pickDocument, pickImage, takePhoto]);
+    setAttachSheetVisible(true);
+  }, []);
 
   const removeAttachment = useCallback((id: string) => {
     setAttachments((prev) => {
@@ -249,82 +229,93 @@ export function Composer({
   const showStop = isGenerating;
 
   return (
-    <View
-      style={[
-        styles.wrapper,
-        { backgroundColor: colors.composerBg, borderColor: colors.border },
-      ]}>
-      {attachments.length > 0 ? (
-        <ScrollView
-          horizontal={false}
-          contentContainerStyle={styles.attachList}
-          showsVerticalScrollIndicator={false}>
-          {attachments.map((a) => (
-            <AttachmentPreview
-              key={a.id}
-              attachment={a.brief}
-              onRemove={() => removeAttachment(a.id)}
-            />
-          ))}
-        </ScrollView>
-      ) : null}
-      <View style={styles.row}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Attach"
-          hitSlop={8}
-          onPress={openAttachMenu}
-          disabled={disabled || isGenerating}
-          style={[
-            styles.iconBtn,
-            {
-              backgroundColor: colors.surfaceMuted,
-              opacity: disabled || isGenerating ? 0.5 : 1,
-            },
-          ]}>
-          <PaperclipIcon size={20} color={colors.text} />
-        </Pressable>
-        <TextInput
-          variant="flat"
-          containerStyle={styles.inputContainer}
-          multiline
-          blurOnSubmit={false}
-          editable={!disabled}
-          placeholder={disabledReason ?? "Message…"}
-          value={content}
-          onChangeText={setContent}
-          scrollEnabled
-          style={styles.composerInput}
-        />
-        {showStop ? (
+    <>
+      <View
+        style={[
+          styles.wrapper,
+          { backgroundColor: colors.composerBg, borderColor: colors.border },
+        ]}>
+        {attachments.length > 0 ? (
+          <ScrollView
+            horizontal={false}
+            contentContainerStyle={styles.attachList}
+            showsVerticalScrollIndicator={false}>
+            {attachments.map((a) => (
+              <AttachmentPreview
+                key={a.id}
+                attachment={a.brief}
+                onRemove={() => removeAttachment(a.id)}
+              />
+            ))}
+          </ScrollView>
+        ) : null}
+        <View style={styles.row}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Stop generating"
-            onPress={() => void onStop()}
-            style={[styles.sendBtn, { backgroundColor: colors.danger }]}>
-            <StopIcon size={16} color="#FFFFFF" />
-          </Pressable>
-        ) : (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Send message"
-            disabled={!canSend || submitting}
-            onPress={() => void submit()}
+            accessibilityLabel="Attach"
+            hitSlop={8}
+            onPress={openAttachMenu}
+            disabled={disabled || isGenerating}
             style={[
-              styles.sendBtn,
+              styles.iconBtn,
               {
-                backgroundColor: canSend ? colors.primary : colors.surfaceMuted,
-                opacity: canSend ? 1 : 0.65,
+                backgroundColor: colors.surfaceMuted,
+                opacity: disabled || isGenerating ? 0.5 : 1,
               },
             ]}>
-            <SendIcon
-              size={20}
-              color={canSend ? colors.primaryText : colors.textMuted}
-            />
+            <PaperclipIcon size={20} color={colors.text} />
           </Pressable>
-        )}
+          <TextInput
+            variant="flat"
+            containerStyle={styles.inputContainer}
+            multiline
+            blurOnSubmit={false}
+            editable={!disabled}
+            placeholder={disabledReason ?? "Message…"}
+            value={content}
+            onChangeText={setContent}
+            scrollEnabled
+            style={styles.composerInput}
+          />
+          {showStop ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Stop generating"
+              onPress={() => void onStop()}
+              style={[styles.sendBtn, { backgroundColor: colors.danger }]}>
+              <StopIcon size={16} color="#FFFFFF" />
+            </Pressable>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Send message"
+              disabled={!canSend || submitting}
+              onPress={() => void submit()}
+              style={[
+                styles.sendBtn,
+                {
+                  backgroundColor: canSend
+                    ? colors.primary
+                    : colors.surfaceMuted,
+                  opacity: canSend ? 1 : 0.65,
+                },
+              ]}>
+              <SendIcon
+                size={20}
+                color={canSend ? colors.primaryText : colors.textMuted}
+              />
+            </Pressable>
+          )}
+        </View>
       </View>
-    </View>
+      <AttachmentPickerSheet
+        visible={attachSheetVisible}
+        onClose={closeAttachSheet}
+        onPickImage={() => void pickImage()}
+        onTakePhoto={() => void takePhoto()}
+        onPickDocument={() => void pickDocument()}
+      />
+    </>
   );
 }
 

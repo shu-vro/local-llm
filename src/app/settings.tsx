@@ -8,7 +8,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Button } from "@/components/common/Button";
 import { Divider } from "@/components/common/Divider";
