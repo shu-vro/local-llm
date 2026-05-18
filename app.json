@@ -1,40 +1,67 @@
 {
   "expo": {
-    "name": "local-llm",
+    "name": "Local LLM",
     "slug": "local-llm",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "localllm",
     "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
     "ios": {
-      "icon": "./assets/expo.icon"
+      "supportsTablet": true,
+      "bundleIdentifier": "com.localllm.app",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Allow Local LLM to attach photos from your library to chat messages. Photos stay on your device.",
+        "NSCameraUsageDescription": "Allow Local LLM to take photos for chat messages. Photos stay on your device.",
+        "NSMicrophoneUsageDescription": "Allow Local LLM to record audio clips for chat messages. Audio stays on your device."
+      }
     },
     "android": {
+      "package": "com.localllm.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0B0B0E",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO"
+      ]
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#0B0B0E",
           "android": {
             "image": "./assets/images/splash-icon.png",
             "imageWidth": 76
           }
         }
-      ]
+      ],
+      [
+        "expo-sqlite",
+        {
+          "enableFTS": true,
+          "useSQLCipher": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Local LLM to attach photos from your library to chat messages.",
+          "cameraPermission": "Allow Local LLM to take photos for chat messages.",
+          "microphonePermission": "Allow Local LLM to record audio clips for chat messages."
+        }
+      ],
+      "expo-file-system"
     ],
     "experiments": {
       "typedRoutes": true,

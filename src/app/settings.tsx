@@ -1,0 +1,418 @@
+import { useRouter } from "expo-router";
+import React, { useCallback, useState } from "react";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { Button } from "@/components/common/Button";
+import { Divider } from "@/components/common/Divider";
+import { IconButton } from "@/components/common/IconButton";
+import { BackIcon, CheckIcon } from "@/components/common/Icons";
+import { Surface } from "@/components/common/Surface";
+import { TextInput } from "@/components/common/TextInput";
+
+import { useCactus } from "@/hooks/useCactus";
+import { useDatabase } from "@/hooks/useDatabase";
+import { useSettings } from "@/hooks/useSettings";
+import { useTheme } from "@/hooks/useTheme";
+import { deleteAllAttachments, deleteAllCorpus } from "@/native/fileStore";
+import {
+  MODEL_DISPLAY_NAME,
+  Spacing,
+  ThemePreference,
+  Typography,
+} from "@/theme";
+
+const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+];
+
+function NumberRow({
+  label,
+  value,
+  onChange,
+  step,
+  min,
+  max,
+  decimals = 0,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  step: number;
+  min: number;
+  max: number;
+  decimals?: number;
+}) {
+  const { colors } = useTheme();
+  const [draft, setDraft] = useState<string>(value.toFixed(decimals));
+
+  const commit = () => {
+    const parsed = Number(draft);
+    if (Number.isFinite(parsed)) {
+      const clamped = Math.max(min, Math.min(max, parsed));
+      onChange(
+        decimals > 0 ? Number(clamped.toFixed(decimals)) : Math.round(clamped),
+      );
+      setDraft(
+        decimals > 0 ? clamped.toFixed(decimals) : String(Math.round(clamped)),
+      );
+    } else {
+      setDraft(value.toFixed(decimals));
+    }
+  };
+
+  return (
+    <View style={styles.numberRow}>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+      </View>
+      <View style={styles.numberControls}>
+        <Pressable
+          onPress={() =>
+            onChange(Math.max(min, Number((value - step).toFixed(decimals))))
+          }
+          style={[styles.numberBtn, { backgroundColor: colors.surfaceMuted }]}>
+          <Text style={[styles.numberBtnText, { color: colors.text }]}>–</Text>
+        </Pressable>
+        <TextInput
+          variant="flat"
+          keyboardType="decimal-pad"
+          value={draft}
+          onChangeText={setDraft}
+          onBlur={commit}
+          containerStyle={{ width: 72, minHeight: 38, paddingVertical: 0 }}
+          inputStyle={{ textAlign: "center" }}
+        />
+        <Pressable
+          onPress={() =>
+            onChange(Math.min(max, Number((value + step).toFixed(decimals))))
+          }
+          style={[styles.numberBtn, { backgroundColor: colors.surfaceMuted }]}>
+          <Text style={[styles.numberBtnText, { color: colors.text }]}>+</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+export default function SettingsScreen() {
+  const router = useRouter();
+  const { colors, preference, setPreference } = useTheme();
+  const { settings, update } = useSettings();
+  const { repos, reload } = useDatabase();
+  const { destroy: destroyClient, refreshCorpus } = useCactus();
+
+  const handleDeleteAllData = useCallback(() => {
+    Alert.alert(
+      "Delete all local data?",
+      "This removes every chat, message, attachment, saved memory, and setting on this device. The model file is kept unless you also delete it.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete everything",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              if (repos) {
+                await repos.threads.deleteAll();
+                await repos.settings.deleteAll();
+              }
+              deleteAllAttachments();
+              deleteAllCorpus();
+              await refreshCorpus();
+              await reload();
+              router.replace("/chat");
+              Alert.alert("Deleted", "All local data was removed.");
+            } catch (err) {
+              Alert.alert(
+                "Could not delete",
+                err instanceof Error ? err.message : String(err),
+              );
+            }
+          },
+        },
+      ],
+    );
+  }, [refreshCorpus, reload, repos, router]);
+
+  const handleDeleteModel = useCallback(() => {
+    Alert.alert(
+      "Delete local model?",
+      "You will need to download the model again before chatting. Other local data is kept.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete model",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await destroyClient();
+              if (repos) await repos.modelState.deleteAll();
+              router.replace("/model");
+            } catch (err) {
+              Alert.alert(
+                "Could not delete",
+                err instanceof Error ? err.message : String(err),
+              );
+            }
+          },
+        },
+      ],
+    );
+  }, [destroyClient, repos, router]);
+
+  return (
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <SafeAreaView edges={["top", "left", "right"]} style={{ flex: 1 }}>
+        <View style={styles.headerRow}>
+          <IconButton
+            accessibilityLabel="Back"
+            size={40}
+            onPress={() => router.back()}>
+            <BackIcon size={24} color={colors.text} />
+          </IconButton>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
+            Settings
+          </Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <Surface variant="elevated" radius="lg" padded style={styles.card}>
+            <Text style={[styles.section, { color: colors.text }]}>
+              Appearance
+            </Text>
+            <View style={styles.themeRow}>
+              {THEME_OPTIONS.map((opt) => {
+                const active = preference === opt.value;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Use ${opt.label} theme`}
+                    onPress={() => setPreference(opt.value)}
+                    style={[
+                      styles.themeOption,
+                      {
+                        backgroundColor: active
+                          ? colors.primary
+                          : colors.surfaceMuted,
+                        borderColor: active ? colors.primary : colors.border,
+                      },
+                    ]}>
+                    <Text
+                      style={{
+                        color: active ? colors.primaryText : colors.text,
+                        fontWeight: Typography.weight.medium,
+                      }}>
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Surface>
+
+          <Surface variant="elevated" radius="lg" padded style={styles.card}>
+            <Text style={[styles.section, { color: colors.text }]}>
+              Inference
+            </Text>
+            <NumberRow
+              label="Context messages"
+              value={settings.contextMessageLimit}
+              onChange={(v) => void update({ contextMessageLimit: v })}
+              step={1}
+              min={2}
+              max={64}
+            />
+            <Divider />
+            <NumberRow
+              label="Context window (tokens)"
+              value={settings.maxContextTokens}
+              onChange={(v) => void update({ maxContextTokens: v })}
+              step={512}
+              min={1024}
+              max={32768}
+            />
+            <Divider />
+            <NumberRow
+              label="Temperature"
+              value={settings.temperature}
+              onChange={(v) => void update({ temperature: v })}
+              step={0.05}
+              min={0}
+              max={2}
+              decimals={2}
+            />
+            <Divider />
+            <NumberRow
+              label="Top-p"
+              value={settings.topP}
+              onChange={(v) => void update({ topP: v })}
+              step={0.05}
+              min={0}
+              max={1}
+              decimals={2}
+            />
+            <Divider />
+            <NumberRow
+              label="Top-k"
+              value={settings.topK}
+              onChange={(v) => void update({ topK: v })}
+              step={1}
+              min={1}
+              max={200}
+            />
+            <Divider />
+            <NumberRow
+              label="Max tokens"
+              value={settings.maxTokens}
+              onChange={(v) => void update({ maxTokens: v })}
+              step={64}
+              min={32}
+              max={4096}
+            />
+          </Surface>
+
+          <Surface variant="elevated" radius="lg" padded style={styles.card}>
+            <Text style={[styles.section, { color: colors.text }]}>Model</Text>
+            <Text style={[styles.body, { color: colors.text }]}>
+              {MODEL_DISPLAY_NAME}
+            </Text>
+            <Text style={[styles.helper, { color: colors.textMuted }]}>
+              Runs locally with no cloud handoff. Telemetry is disabled.
+            </Text>
+            <View style={styles.modelActions}>
+              <Button
+                title="Open model setup"
+                variant="secondary"
+                onPress={() => router.push("/model")}
+                fullWidth
+              />
+            </View>
+            <View style={styles.modelActions}>
+              <Button
+                title="Delete local model"
+                variant="danger"
+                onPress={handleDeleteModel}
+                fullWidth
+              />
+            </View>
+          </Surface>
+
+          <Surface variant="muted" radius="lg" padded style={styles.card}>
+            <Text style={[styles.section, { color: colors.text }]}>
+              Privacy
+            </Text>
+            <View style={styles.privacyRow}>
+              <CheckIcon size={16} color={colors.success} />
+              <Text style={[styles.privacyText, { color: colors.text }]}>
+                Everything stays on-device. No telemetry, analytics, or remote
+                logging.
+              </Text>
+            </View>
+            <View style={styles.privacyRow}>
+              <CheckIcon size={16} color={colors.success} />
+              <Text style={[styles.privacyText, { color: colors.text }]}>
+                Cloud handoff is disabled at every model call.
+              </Text>
+            </View>
+            <View style={styles.privacyRow}>
+              <CheckIcon size={16} color={colors.success} />
+              <Text style={[styles.privacyText, { color: colors.text }]}>
+                Attachments are saved inside this app&apos;s sandbox and never
+                uploaded anywhere.
+              </Text>
+            </View>
+          </Surface>
+
+          <Surface variant="elevated" radius="lg" padded style={styles.card}>
+            <Text style={[styles.section, { color: colors.text }]}>Data</Text>
+            <Button
+              title="Delete all local data"
+              variant="danger"
+              onPress={handleDeleteAllData}
+              fullWidth
+            />
+          </Surface>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+  },
+  headerTitle: {
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.semibold,
+  },
+  scroll: { padding: Spacing.lg, gap: Spacing.lg, paddingBottom: Spacing.huge },
+  card: { gap: Spacing.sm },
+  section: {
+    fontSize: Typography.size.md,
+    fontWeight: Typography.weight.semibold,
+    marginBottom: Spacing.xs,
+  },
+  themeRow: { flexDirection: "row", gap: Spacing.sm },
+  themeOption: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+  },
+  numberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  numberControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  numberBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  numberBtnText: {
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.semibold,
+  },
+  label: { fontSize: Typography.size.md },
+  body: { fontSize: Typography.size.md, fontWeight: Typography.weight.medium },
+  helper: { fontSize: Typography.size.sm, marginTop: Spacing.xs },
+  modelActions: { marginTop: Spacing.sm },
+  privacyRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.xs,
+  },
+  privacyText: {
+    flex: 1,
+    fontSize: Typography.size.sm,
+    lineHeight: Typography.size.sm * Typography.lineHeight.relaxed,
+  },
+});

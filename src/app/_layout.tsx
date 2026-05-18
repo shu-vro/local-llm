@@ -1,16 +1,52 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import React from 'react';
-import { useColorScheme } from 'react-native';
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import * as SystemUI from "expo-system-ui";
+import React, { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
+import { useTheme } from "@/hooks/useTheme";
+import { CactusProvider } from "@/providers/CactusProvider";
+import { DatabaseProvider } from "@/providers/DatabaseProvider";
+import { ThemeProvider } from "@/providers/ThemeProvider";
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+function ThemedRoot({ children }: { children: React.ReactNode }) {
+  const { theme, colors } = useTheme();
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(colors.background).catch(
+      () => undefined,
+    );
+  }, [colors.background]);
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <>
+      <StatusBar style={theme === "dark" ? "light" : "dark"} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+          animation: "fade",
+        }}
+      />
+      {children}
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ErrorBoundary fallbackTitle="The app crashed unexpectedly">
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <DatabaseProvider>
+            <ThemeProvider>
+              <CactusProvider>
+                <ThemedRoot>{null}</ThemedRoot>
+              </CactusProvider>
+            </ThemeProvider>
+          </DatabaseProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
