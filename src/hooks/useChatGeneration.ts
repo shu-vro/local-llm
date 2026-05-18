@@ -62,8 +62,13 @@ export function useChatGeneration(): ChatGenerationApi {
 
   const ensureReady = useCallback(() => {
     if (!controller) throw new Error("Generation controller not ready");
-    if (!status.isDownloaded) throw new Error("Model is not downloaded yet.");
-  }, [controller, status.isDownloaded]);
+    if (!status.isDownloaded)
+      throw new Error(
+        "Model is not downloaded yet. Open Models to download one.",
+      );
+    if (!status.isInitialized)
+      throw new Error("Model is not initialized. Open Models to initialize.");
+  }, [controller, status.isDownloaded, status.isInitialized]);
 
   const send: ChatGenerationApi["send"] = useCallback(
     async (threadId, content, attachments) => {

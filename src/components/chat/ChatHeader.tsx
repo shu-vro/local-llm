@@ -1,8 +1,9 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { useActiveModel } from "@/hooks/useActiveModel";
 import { useTheme } from "@/hooks/useTheme";
-import { MODEL_DISPLAY_NAME, Spacing, Typography } from "@/theme";
+import { Spacing, Typography } from "@/theme";
 
 import { IconButton } from "@/components/common/IconButton";
 import { Dot, MenuIcon, NewChatIcon } from "@/components/common/Icons";
@@ -15,6 +16,7 @@ export interface ChatHeaderProps {
   onOpenDrawer: () => void;
   onNewChat: () => void;
   onPressTitle?: () => void;
+  onPressModel?: () => void;
 }
 
 export function ChatHeader({
@@ -25,8 +27,10 @@ export function ChatHeader({
   onOpenDrawer,
   onNewChat,
   onPressTitle,
+  onPressModel,
 }: ChatHeaderProps) {
   const { colors } = useTheme();
+  const { displayName } = useActiveModel();
   const statusColor = isGenerating
     ? colors.warning
     : modelReady
@@ -63,14 +67,16 @@ export function ChatHeader({
         <Text numberOfLines={1} style={[styles.title, { color: colors.text }]}>
           {title || "New chat"}
         </Text>
-        <View style={styles.statusRow}>
-          <Dot size={6} color={statusColor} />
-          <Text
-            style={[styles.subtitle, { color: colors.textMuted }]}
-            numberOfLines={1}>
-            {MODEL_DISPLAY_NAME} · {statusLabel}
-          </Text>
-        </View>
+        <Pressable onPress={onPressModel} disabled={!onPressModel} hitSlop={8}>
+          <View style={styles.statusRow}>
+            <Dot size={6} color={statusColor} />
+            <Text
+              style={[styles.subtitle, { color: colors.textMuted }]}
+              numberOfLines={1}>
+              {displayName} · {statusLabel}
+            </Text>
+          </View>
+        </Pressable>
       </Pressable>
       <View style={[styles.side, styles.sideEnd]}>
         <IconButton accessibilityLabel="New chat" size={40} onPress={onNewChat}>

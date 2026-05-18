@@ -20,6 +20,7 @@ import {
   discardPreparedAttachment,
   prepareAttachment,
 } from "@/ai/attachmentPipeline";
+import { useActiveModel } from "@/hooks/useActiveModel";
 import { useTheme } from "@/hooks/useTheme";
 import { Radius, Spacing } from "@/theme";
 
@@ -63,6 +64,7 @@ export function Composer({
   onStop,
 }: ComposerProps) {
   const { colors } = useTheme();
+  const { supportsVision } = useActiveModel();
   const [content, setContent] = useState("");
   const [height, setHeight] = useState(MIN_COMPOSER_HEIGHT);
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
@@ -74,6 +76,13 @@ export function Composer({
     (content.trim().length > 0 || attachments.length > 0);
 
   const pickImage = useCallback(async () => {
+    if (!supportsVision) {
+      Alert.alert(
+        "Vision not supported",
+        "The active model does not support images. Switch to a vision model (e.g. Gemma 4 E2B or Qwen3.5 VL) in Models.",
+      );
+      return;
+    }
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
@@ -112,9 +121,16 @@ export function Composer({
         err instanceof Error ? err.message : String(err),
       );
     }
-  }, [threadId]);
+  }, [supportsVision, threadId]);
 
   const takePhoto = useCallback(async () => {
+    if (!supportsVision) {
+      Alert.alert(
+        "Vision not supported",
+        "The active model does not support images. Switch to a vision model in Models.",
+      );
+      return;
+    }
     try {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
       if (!perm.granted) {
@@ -150,7 +166,7 @@ export function Composer({
         err instanceof Error ? err.message : String(err),
       );
     }
-  }, [threadId]);
+  }, [supportsVision, threadId]);
 
   const pickDocument = useCallback(async () => {
     try {

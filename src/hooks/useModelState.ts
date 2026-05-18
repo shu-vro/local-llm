@@ -9,7 +9,7 @@ export function useModelState() {
 
   const ensureReady = useCallback(async () => {
     if (!status.isDownloaded) {
-      await downloadModel();
+      await downloadModel(status.modelId);
     }
     if (!status.isInitialized) {
       await initializeModel();

@@ -10,7 +10,12 @@ import {
 
 import { getCactusFileSystem } from "@/ai/cactusNative";
 import { resolveModelDownloadUrl } from "@/ai/modelDownload";
-import { MODEL_ALIAS, MODEL_DISPLAY_NAME } from "@/theme";
+import {
+  DEFAULT_MODEL_DISPLAY_ID,
+  DEFAULT_MODEL_QUANTIZATION,
+  DEFAULT_MODEL_REGISTRY_ALIAS,
+  type ModelQuantization,
+} from "@/ai/models";
 import { AppError } from "@/utils/errors";
 
 function normalizeProgress(value: number): number {
@@ -19,8 +24,8 @@ function normalizeProgress(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
-export const MODEL_ID = MODEL_ALIAS;
-export const MODEL_DISPLAY = MODEL_DISPLAY_NAME;
+export const MODEL_ID = DEFAULT_MODEL_REGISTRY_ALIAS;
+export const MODEL_DISPLAY = DEFAULT_MODEL_DISPLAY_ID;
 
 export interface CactusInferenceOptions {
   temperature?: number;
@@ -53,7 +58,7 @@ const PRIVACY_DEFAULTS: CactusLMCompleteOptions = {
 export interface CactusClientConfig {
   modelAlias?: string;
   corpusDir?: string;
-  quantization?: "int4" | "int8";
+  quantization?: ModelQuantization;
 }
 
 export class CactusClient {
@@ -69,8 +74,8 @@ export class CactusClient {
   private currentSignalListener: (() => void) | null = null;
 
   constructor(config: CactusClientConfig = {}) {
-    this.modelAlias = config.modelAlias ?? MODEL_ALIAS;
-    this.quantization = config.quantization ?? "int8";
+    this.modelAlias = config.modelAlias ?? DEFAULT_MODEL_REGISTRY_ALIAS;
+    this.quantization = config.quantization ?? DEFAULT_MODEL_QUANTIZATION;
     this.corpusDir = config.corpusDir;
     this.lm = new CactusLM({
       model: this.modelAlias,
@@ -308,15 +313,24 @@ export class CactusClient {
   }
 }
 
-let singleton: CactusClient | null = null;
+let activeClient: CactusClient | null = null;
 
-export function getCactusClient(): CactusClient {
-  if (!singleton) singleton = new CactusClient();
-  return singleton;
+export function createCactusClient(
+  config: CactusClientConfig = {},
+): CactusClient {
+  return new CactusClient(config);
+}
+
+export function getCactusClient(): CactusClient | null {
+  return activeClient;
+}
+
+export function setActiveCactusClient(client: CactusClient | null): void {
+  activeClient = client;
 }
 
 export async function disposeCactusClient(): Promise<void> {
-  if (!singleton) return;
-  await singleton.destroy();
-  singleton = null;
+  if (!activeClient) return;
+  await activeClient.destroy();
+  activeClient = null;
 }

@@ -1,10 +1,11 @@
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
+import { useActiveModel } from "@/hooks/useActiveModel";
 import { useCactus } from "@/hooks/useCactus";
 import { useTheme } from "@/hooks/useTheme";
-import { MODEL_DISPLAY_NAME, Spacing, Typography } from "@/theme";
+import { Spacing, Typography } from "@/theme";
 
 import { Button } from "@/components/common/Button";
 import { SparkleIcon } from "@/components/common/Icons";
@@ -17,6 +18,7 @@ export interface ModelGateProps {
 
 export function ModelGate({ variant = "inline" }: ModelGateProps) {
   const { status } = useCactus();
+  const { displayName } = useActiveModel();
   const { colors } = useTheme();
   const router = useRouter();
 
@@ -40,8 +42,8 @@ export function ModelGate({ variant = "inline" }: ModelGateProps) {
         <Text
           style={[styles.body, { color: colors.textMuted }]}
           numberOfLines={3}>
-          {MODEL_DISPLAY_NAME} is downloaded once and then runs entirely on this
-          device. After the download, the app works fully offline.
+          {displayName} must be downloaded before you can chat. Pick a model in
+          the library, then download it once to run fully offline.
         </Text>
         {status.isDownloading ? (
           <View style={styles.progressRow}>
@@ -61,7 +63,7 @@ export function ModelGate({ variant = "inline" }: ModelGateProps) {
         <Button
           title={status.error ? "Retry download" : "Download"}
           size="sm"
-          onPress={() => router.push("/model")}
+          onPress={() => router.push("/models" as Href)}
         />
       ) : null}
     </Surface>

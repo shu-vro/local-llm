@@ -39,5 +39,7 @@ export const Typography = {
   },
 } as const;
 
-export const MODEL_DISPLAY_NAME = "google/gemma-4-E2B-it";
-export const MODEL_ALIAS = "gemma-4-e2b-it";
+export {
+  DEFAULT_MODEL_REGISTRY_ALIAS as MODEL_ALIAS,
+  DEFAULT_MODEL_DISPLAY_ID as MODEL_DISPLAY_NAME,
+} from "@/ai/models";

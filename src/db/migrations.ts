@@ -84,6 +84,21 @@ export const migrations: Migration[] = [
       `);
     },
   },
+  {
+    version: 2,
+    name: "multi_model",
+    up: async (db) => {
+      await db.raw(`ALTER TABLE model_state ADD COLUMN quantization TEXT`);
+      await db.raw(`ALTER TABLE model_state ADD COLUMN features_json TEXT`);
+      await db.raw(`ALTER TABLE model_state ADD COLUMN provider TEXT`);
+      await db.raw(`ALTER TABLE model_state ADD COLUMN size_tier TEXT`);
+      await db.execute(
+        `INSERT INTO settings (key, value) VALUES (?, ?)
+         ON CONFLICT(key) DO NOTHING`,
+        ["inference.activeModelId", "google/gemma-4-E2B-it"],
+      );
+    },
+  },
 ];
 
 export async function runMigrations(

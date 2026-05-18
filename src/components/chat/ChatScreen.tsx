@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -152,7 +152,7 @@ export function ChatScreen({ threadId }: ChatScreenProps) {
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         if (message.includes("not been downloaded")) {
-          router.push("/model");
+          router.push("/models" as Href);
         } else {
           Alert.alert("Could not send", message);
         }
@@ -223,10 +223,12 @@ export function ChatScreen({ threadId }: ChatScreenProps) {
     }
   }, [editDraft, editTarget, generation, threadId]);
 
-  const composerDisabled = !status.isDownloaded;
+  const composerDisabled = !status.isDownloaded || !status.isInitialized;
   const composerDisabledReason = !status.isDownloaded
-    ? "Download the local model first"
-    : undefined;
+    ? "Download a model first"
+    : !status.isInitialized
+      ? "Initialize the model from Models"
+      : undefined;
 
   const contextEstimate = useMemo(() => {
     if (messages.length === 0) return null;
@@ -284,6 +286,7 @@ export function ChatScreen({ threadId }: ChatScreenProps) {
             const id = await createThread();
             router.replace(`/chat/${id}`);
           }}
+          onPressModel={() => router.push("/models" as Href)}
         />
       </SafeAreaView>
 

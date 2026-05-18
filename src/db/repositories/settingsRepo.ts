@@ -1,6 +1,9 @@
 import { NativeSQLite } from "@/native/sqlite";
 
+import { DEFAULT_MODEL_DISPLAY_ID } from "@/ai/models";
+
 export interface AppSettings {
+  activeModelId: string;
   contextMessageLimit: number;
   maxContextTokens: number;
   temperature: number;
@@ -11,6 +14,7 @@ export interface AppSettings {
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  activeModelId: DEFAULT_MODEL_DISPLAY_ID,
   contextMessageLimit: 16,
   maxContextTokens: 8192,
   temperature: 0.7,
@@ -21,6 +25,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 };
 
 export const SETTINGS_KEYS = {
+  activeModelId: "inference.activeModelId",
   contextMessageLimit: "inference.contextMessageLimit",
   maxContextTokens: "inference.maxContextTokens",
   temperature: "inference.temperature",
@@ -63,7 +68,12 @@ export function createSettingsRepo(db: NativeSQLite) {
     );
     const map = new Map(rows.map((r) => [r.key, r.value]));
     const themePref = map.get(SETTINGS_KEYS.themePreference);
+    const activeModelRaw = map.get(SETTINGS_KEYS.activeModelId);
     return {
+      activeModelId:
+        activeModelRaw && activeModelRaw.length > 0
+          ? activeModelRaw
+          : DEFAULT_SETTINGS.activeModelId,
       contextMessageLimit: Math.max(
         2,
         Math.min(
@@ -141,6 +151,8 @@ export function createSettingsRepo(db: NativeSQLite) {
 
   async function update(partial: Partial<AppSettings>): Promise<void> {
     const entries: [string, string][] = [];
+    if (partial.activeModelId != null)
+      entries.push([SETTINGS_KEYS.activeModelId, partial.activeModelId]);
     if (partial.contextMessageLimit != null)
       entries.push([
         SETTINGS_KEYS.contextMessageLimit,

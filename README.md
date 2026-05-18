@@ -9,15 +9,15 @@ messages, attachments, and settings live in on-device SQLite. After the
 one-time model download, the app works fully offline. There is no cloud
 fallback, no telemetry, no analytics, and no remote logging.
 
-- **Model:** `google/gemma-4-E2B-it` (Cactus alias `gemma-4-e2b-it`)
+- **Models:** browse, download, and switch among [Cactus-supported models](https://github.com/cactus-compute/cactus) (Gemma, Qwen, Liquid AI, and more). Default active model: `google/gemma-4-E2B-it`
 - **Runtime:** `cactus-react-native` + `react-native-nitro-modules`
 - **Storage:** `expo-sqlite` (WAL) + `expo-file-system` (attachments on disk)
 - **UI:** all custom in-project components built on React Native primitives
 - **Network use:** only the one-time model download
 
 > The app does not ship the model in the binary. After install, you are
-> prompted to download `google/gemma-4-E2B-it` once. Every later inference
-> runs locally.
+> prompted to download a model from the **Models** library. Every later
+> inference runs locally with the model you selected.
 
 ---
 
@@ -50,17 +50,28 @@ npm run android
 The first launch will:
 
 1. Open the SQLite database, run migrations, and seed local settings.
-2. Show the **On-device model** screen.
-3. Download `google/gemma-4-E2B-it` once. Progress is persisted across restarts.
-4. Initialize the model.
-5. From then on, the app works completely offline.
+2. Open **Models** (or follow the in-chat prompt) to browse models by provider.
+3. Download a model (sizes and parameter counts are shown as estimates). Progress is persisted per model in `model_state`.
+4. Tap **Use this model** and **Initialize for chat** when prompted.
+5. From then on, the app works completely offline with your active model.
+
+## Choosing and managing models
+
+Open **Models** from Settings, the chat header subtitle, or the download banner.
+
+- **Chat** tab: text and vision models usable for chat (`completion` capability).
+- **All** tab: full Cactus catalog including speech and embedding models (not used in chat yet).
+- **Downloaded** tab: models stored on this device.
+
+Each model card shows **parameter count**, **size tier**, **estimated download size** (INT4/INT8), capability chips (Vision, Tools, Apple NPU, etc.), and whether it is **Active** or **Downloaded**.
+
+Switching models stops any in-flight generation first. Vision attachments in chat require an active model with the Vision capability (e.g. Gemma 4 E2B, Qwen3.5 VL).
+
+Bundled metadata comes from [cactus `models.json`](https://github.com/cactus-compute/cactus/blob/main/models.json), merged at runtime with the `getRegistry()` download URLs from `cactus-react-native`.
 
 ## How model download works
 
-Tapping **Download model** calls `CactusLM.download({ onProgress })`. Cactus
-fetches the model artifacts and stores them in the device's app sandbox. The
-download progress is persisted to the `model_state` table so the UI can resume
-showing the right state across launches.
+Tapping **Download** resolves weights via the Cactus registry (with a `main` revision fallback when needed), then stores artifacts in the app sandbox. Progress is persisted per `model_id` in `model_state`.
 
 Once `isDownloaded` is true, the app never makes another outbound network
 request. All `complete()` calls force these flags so cloud handoff is impossible:

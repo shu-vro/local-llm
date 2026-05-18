@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   Alert,
@@ -17,17 +17,13 @@ import { BackIcon, CheckIcon } from "@/components/common/Icons";
 import { Surface } from "@/components/common/Surface";
 import { TextInput } from "@/components/common/TextInput";
 
+import { useActiveModel } from "@/hooks/useActiveModel";
 import { useCactus } from "@/hooks/useCactus";
 import { useDatabase } from "@/hooks/useDatabase";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
 import { deleteAllAttachments, deleteAllCorpus } from "@/native/fileStore";
-import {
-  MODEL_DISPLAY_NAME,
-  Spacing,
-  ThemePreference,
-  Typography,
-} from "@/theme";
+import { Spacing, ThemePreference, Typography } from "@/theme";
 
 const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: "system", label: "System" },
@@ -109,7 +105,8 @@ export default function SettingsScreen() {
   const { colors, preference, setPreference } = useTheme();
   const { settings, update } = useSettings();
   const { repos, reload } = useDatabase();
-  const { destroy: destroyClient, refreshCorpus } = useCactus();
+  const { status, refreshCorpus } = useCactus();
+  const { displayName, deleteModel } = useActiveModel();
 
   const handleDeleteAllData = useCallback(() => {
     Alert.alert(
@@ -144,20 +141,18 @@ export default function SettingsScreen() {
     );
   }, [refreshCorpus, reload, repos, router]);
 
-  const handleDeleteModel = useCallback(() => {
+  const handleDeleteActiveModel = useCallback(() => {
     Alert.alert(
-      "Delete local model?",
-      "You will need to download the model again before chatting. Other local data is kept.",
+      "Delete active model?",
+      `Remove ${displayName} weights from this device? Other chats and settings are kept.`,
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Delete model",
+          text: "Delete",
           style: "destructive",
           onPress: async () => {
             try {
-              await destroyClient();
-              if (repos) await repos.modelState.deleteAll();
-              router.replace("/model");
+              await deleteModel(status.modelId);
             } catch (err) {
               Alert.alert(
                 "Could not delete",
@@ -168,7 +163,7 @@ export default function SettingsScreen() {
         },
       ],
     );
-  }, [destroyClient, repos, router]);
+  }, [deleteModel, displayName, status.modelId]);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -286,27 +281,36 @@ export default function SettingsScreen() {
           <Surface variant="elevated" radius="lg" padded style={styles.card}>
             <Text style={[styles.section, { color: colors.text }]}>Model</Text>
             <Text style={[styles.body, { color: colors.text }]}>
-              {MODEL_DISPLAY_NAME}
+              Active: {displayName}
+            </Text>
+            <Text style={[styles.helper, { color: colors.textMuted }]}>
+              {status.isDownloaded
+                ? status.isInitialized
+                  ? "Ready for offline chat."
+                  : "Downloaded — open Models to initialize."
+                : "No model downloaded for chat yet."}
             </Text>
             <Text style={[styles.helper, { color: colors.textMuted }]}>
               Runs locally with no cloud handoff. Telemetry is disabled.
             </Text>
             <View style={styles.modelActions}>
               <Button
-                title="Open model setup"
+                title="Browse & manage models"
                 variant="secondary"
-                onPress={() => router.push("/model")}
+                onPress={() => router.push("/models" as Href)}
                 fullWidth
               />
             </View>
-            <View style={styles.modelActions}>
-              <Button
-                title="Delete local model"
-                variant="danger"
-                onPress={handleDeleteModel}
-                fullWidth
-              />
-            </View>
+            {status.isDownloaded ? (
+              <View style={styles.modelActions}>
+                <Button
+                  title="Delete active model from device"
+                  variant="danger"
+                  onPress={handleDeleteActiveModel}
+                  fullWidth
+                />
+              </View>
+            ) : null}
           </Surface>
 
           <Surface variant="muted" radius="lg" padded style={styles.card}>
