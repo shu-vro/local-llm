@@ -1,7 +1,8 @@
 # Local LLM — a private, offline ChatGPT-style mobile app
 
-> [!NOTE]
+<!-- > [!NOTE]
 > THIS IS A VIBE CODED APP. Currently I understand the architecture, but I don't understand the code a to z, but i will try to. If I do, I will update the README.md informing you 🥲
+-->
 
 A React Native (Expo SDK 55) app that runs a multimodal LLM locally on the
 device using [Cactus Compute](https://docs.cactuscompute.com/). All chats,
